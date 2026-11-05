@@ -2,8 +2,26 @@ from functools import lru_cache
 from typing import Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from pydantic import Field, field_validator
+from pydantic import (
+    BaseModel,
+    Field,
+    HttpUrl,
+    SecretStr,
+    field_validator,
+)
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+class CalendarSource(BaseModel):
+    id: str = Field(pattern=r"^[A-Za-z0-9_-]+$")
+    name: str = Field(min_length=1)
+    url: SecretStr
+    color: str = Field(default="#4285F4", pattern=r"^#[0-9a-fA-F]{6}$")
+
+    @field_validator("url")
+    @classmethod
+    def validate_url(cls, value: SecretStr) -> SecretStr:
+        HttpUrl(value.get_secret_value())
+        return value
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -24,10 +42,23 @@ class Settings(BaseSettings):
             ZoneInfo(value)
         except (ZoneInfoNotFoundError, ValueError) as exc:
             raise ValueError(
-                f"Uknown timezone: {value}"
+                f"Unknown timezone: {value}"
             ) from exc
 
         return value
+
+    @field_validator("calendars")
+    @classmethod
+    def validate_sources(
+            cls,
+            sources: list[CalendarSource],
+    ) -> list[CalendarSource]:
+        ids = [source.id for source in sources]
+
+        if len(ids) != len(set(ids)):
+            raise ValueError("Calendar source IDs must be unique")
+
+        return sources
 
 @lru_cache
 def get_settings() -> Settings:
