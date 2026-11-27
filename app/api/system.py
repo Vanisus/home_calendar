@@ -3,7 +3,7 @@ from time import monotonic
 
 from fastapi import APIRouter, Request, Response
 
-from app.schemas import HealthResponse, SystemResponse
+from app.schemas.schemas import HealthResponse, SystemResponse
 
 router = APIRouter(tags=["system"])
 

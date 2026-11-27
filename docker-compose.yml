@@ -1,0 +1,37 @@
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    command: [ "postgres", "-c", "shared_buffers=32MB", "-c", "max_connections=10" ]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      HOMEBOARD_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      HOMEBOARD_ADMIN_TOKEN: ${HOMEBOARD_ADMIN_TOKEN}
+      HOMEBOARD_TIMEZONE: ${HOMEBOARD_TIMEZONE:-Europe/Saratov}
+      HOMEBOARD_LOG_LEVEL: ${HOMEBOARD_LOG_LEVEL:-INFO}
+      HOMEBOARD_CALENDAR_REFRESH_SECONDS: ${HOMEBOARD_CALENDAR_REFRESH_SECONDS:-300}
+      HOMEBOARD_CALENDAR_DAYS_AHEAD: ${HOMEBOARD_CALENDAR_DAYS_AHEAD:-60}
+    ports:
+      - "8000:8000"
+
+volumes:
+  pgdata:

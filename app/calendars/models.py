@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from datetime import date, datetime
 
 from pydantic import BaseModel
@@ -34,3 +35,10 @@ class AgendaResponse(BaseModel):
     end_date: date
     events: list[CalendarEvent]
     sources: list[SourceStatus]
+
+@dataclass(frozen=True, slots=True)
+class SourceConfig:
+    id: str
+    name: str
+    url: str
+    color: str
